@@ -43,7 +43,7 @@
 
 #include "adb_install.h"
 
-int signature_check_enabled = 1;
+int signature_check_enabled = 0;
 int script_assert_enabled = 1;
 static const char *SDCARD_UPDATE_FILE = "/sdcard/update.zip";
 
@@ -88,10 +88,10 @@ void write_string_to_file(const char* filename, const char* string) {
 }
 
 void write_recovery_version() {
-    if ( is_data_media() ) {
-        write_string_to_file("/sdcard/0/clockworkmod/.recovery_version",EXPAND(RECOVERY_VERSION) "\n" EXPAND(TARGET_DEVICE));
-    }
-    write_string_to_file("/sdcard/clockworkmod/.recovery_version",EXPAND(RECOVERY_VERSION) "\n" EXPAND(TARGET_DEVICE));
+	if (0 == ensure_path_mounted("/emmc"))
+		write_string_to_file("/emmc/clockworkmod/.recovery_version",EXPAND(RECOVERY_VERSION) "\n" EXPAND(TARGET_DEVICE));
+	else if (0 == ensure_path_mounted("/sdcard")) 
+		write_string_to_file("/sdcard/clockworkmod/.recovery_version",EXPAND(RECOVERY_VERSION) "\n" EXPAND(TARGET_DEVICE));
 }
 
 void
@@ -718,13 +718,19 @@ int format_device(const char *device, const char *path, const char *fs_type) {
             // Our desired filesystem matches the one in fstab, respect v->length
             length = v->length;
         }
-        reset_ext4fs_info();
-        int result = make_ext4fs(device, length, v->mount_point, sehandle);
-        if (result != 0) {
-            LOGE("format_volume: make_extf4fs failed on %s\n", device);
-            return -1;
-        }
-        return 0;
+		char ext4_cmd[PATH_MAX];
+		sprintf(ext4_cmd, "/sbin/mke2fs -T ext4 -b 4096 -m 0 -F %s", device);
+        int ret = __system(ext4_cmd);
+		if (ret != 0) {
+			ui_print("use make_extf4fs format %s.\n", device);
+			reset_ext4fs_info();
+        	ret = make_ext4fs(device, length, v->mount_point, sehandle);
+			if (ret != 0) {
+        	    LOGE("format_volume: make_extf4fs failed on %s\n", device);
+        	    return -1;
+        	}        	
+		}
+		return 0;
     }
 
     return format_unknown_device(device, path, fs_type);
@@ -778,8 +784,9 @@ int format_unknown_device(const char *device, const char* path, const char *fs_t
 
     static char tmp[PATH_MAX];
     if (strcmp(path, "/data") == 0) {
-        sprintf(tmp, "cd /data ; for f in $(ls -a | grep -v ^media$); do rm -rf $f; done");
-        __system(tmp);
+        //sprintf(tmp, "cd /data ; for f in $(ls -a | grep -v ^media$); do rm -rf $f; done");
+        //__system(tmp);
+		__system("cd /data ; for f in $(ls -a | grep -v '^media$'); do rm -rf \"$f\"; done");
         // if the /data/media sdcard has already been migrated for android 4.2,
         // prevent the migration from happening again by writing the .layout_version
         struct stat st;
@@ -799,9 +806,9 @@ int format_unknown_device(const char *device, const char* path, const char *fs_t
         }
     }
     else {
-        sprintf(tmp, "rm -rf %s/*", path);
+        sprintf(tmp, "rm -rf ""%s/*""", path);
         __system(tmp);
-        sprintf(tmp, "rm -rf %s/.*", path);
+        sprintf(tmp, "rm -rf ""%s/.*""", path);
         __system(tmp);
     }
 
@@ -923,7 +930,8 @@ void show_partition_menu()
         }
         else {
           options[mountable_volumes + formatable_volumes] = "format /data and /data/media (/sdcard)";
-          options[mountable_volumes + formatable_volumes + 1] = NULL;
+          options[mountable_volumes + formatable_volumes + 1] = "mount USB storage";
+          options[mountable_volumes + formatable_volumes + 2] = NULL;
         }
 
         int chosen_item = get_menu_selection(headers, &options, 0, 0);
@@ -945,6 +953,9 @@ void show_partition_menu()
                 handle_data_media_format(0);  
             }
         }
+        else if (chosen_item == (mountable_volumes+formatable_volumes+1)) {
+                show_mount_usb_storage_menu();
+		}
         else if (chosen_item < mountable_volumes) {
             MountMenuEntry* e = &mount_menu[chosen_item];
             Volume* v = e->v;
@@ -1163,8 +1174,12 @@ void show_nandroid_menu()
                     {
                         strftime(backup_path, sizeof(backup_path), "/sdcard/clockworkmod/backup/%F.%H.%M.%S", tmp);
                     }
-                    nandroid_backup(backup_path);
-                    write_recovery_version();
+					ui_print("to:%s\n", backup_path);
+                    if (confirm_selection( "Confirm backup?", "Yes - Backup"))
+                    {
+						nandroid_backup(backup_path);                    
+						write_recovery_version();
+					}
                 }
                 break;
             case 1:
@@ -1214,7 +1229,9 @@ void show_nandroid_menu()
                             break;
                         }
                     }
-                    nandroid_backup(backup_path);
+					ui_print("to:%s\n", backup_path);
+                    if (confirm_selection( "Confirm backup?", "Yes - Backup"))
+                    	nandroid_backup(backup_path);
                 }
                 break;
             case 7:
@@ -1301,19 +1318,19 @@ static void partition_sdcard(const char* volume) {
 int can_partition(const char* volume) {
     Volume *vol = volume_for_path(volume);
     if (vol == NULL) {
-        LOGI("Can't format unknown volume: %s\n", volume);
+        //LOGI("Can't format unknown volume: %s\n", volume);
         return 0;
     }
 
     int vol_len = strlen(vol->device);
     // do not allow partitioning of a device that isn't mmcblkX or mmcblkXp1
     if (vol->device[vol_len - 2] == 'p' && vol->device[vol_len - 1] != '1') {
-        LOGI("Can't partition unsafe device: %s\n", vol->device);
+        //LOGI("Can't partition unsafe device: %s\n", vol->device);
         return 0;
     }
     
-    if (strcmp(vol->fs_type, "vfat") != 0) {
-        LOGI("Can't partition non-vfat: %s\n", vol->fs_type);
+    if (strcmp(vol->fs_type, "vfat") != 0 && strcmp(vol->fs_type, "auto") != 0) {
+        //LOGI("Can't partition non-vfat: %s\n", vol->fs_type);
         return 0;
     }
 
@@ -1473,6 +1490,7 @@ void create_fstab()
     write_fstab_root("/sdcard", file);
     write_fstab_root("/sd-ext", file);
     write_fstab_root("/external_sd", file);
+	write_fstab_root("/preload", file);
     fclose(file);
     LOGI("Completed outputting fstab.\n");
 }

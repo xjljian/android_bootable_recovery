@@ -650,6 +650,7 @@ wipe_data(int confirm) {
     }
     erase_volume("/sd-ext");
     erase_volume("/sdcard/.android_secure");
+    erase_volume("/external_sd/.android_secure");
     ui_print("Data wipe complete.\n");
 }
 
@@ -827,7 +828,7 @@ main(int argc, char **argv) {
             return getprop_main(argc, argv);
         return busybox_driver(argc, argv);
     }
-    __system("/sbin/postrecoveryboot.sh");
+    //__system("/sbin/postrecoveryboot.sh");
 
     int is_user_initiated_recovery = 0;
     time_t start = time(NULL);
@@ -839,7 +840,10 @@ main(int argc, char **argv) {
 
     device_ui_init(&ui_parameters);
     ui_init();
-    ui_print(EXPAND(RECOVERY_VERSION)"\n");
+    ui_print(EXPAND(RECOVERY_VERSION));
+	ui_print("("EXPAND(RECOVERY_BUILD_DATE)")\n");
+	//ui_print("Compiled by Xiaolu("EXPAND(RECOVERY_BUILD_DATE)")\n");
+	__system("/sbin/postrecoveryboot.sh");
     load_volume_table();
     process_volumes();
     LOGI("Processing arguments.\n");
@@ -886,7 +890,7 @@ main(int argc, char **argv) {
 
     if (!sehandle) {
         fprintf(stderr, "Warning: No file_contexts\n");
-        ui_print("Warning:  No file_contexts\n");
+        //ui_print("Warning:  No file_contexts\n");
     }
 
     LOGI("device_recovery_start()\n");

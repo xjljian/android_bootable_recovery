@@ -43,7 +43,7 @@ static int gShowBackButton = 0;
 #endif
 
 #define MAX_COLS 96
-#define MAX_ROWS 32
+#define MAX_ROWS 50
 
 #define MENU_MAX_COLS 64
 #define MENU_MAX_ROWS 250
@@ -51,7 +51,7 @@ static int gShowBackButton = 0;
 #define MIN_LOG_ROWS 3
 
 #define CHAR_WIDTH BOARD_RECOVERY_CHAR_WIDTH
-#define CHAR_HEIGHT BOARD_RECOVERY_CHAR_HEIGHT
+#define CHAR_HEIGHT (BOARD_RECOVERY_CHAR_HEIGHT+8)
 
 #define UI_WAIT_KEY_TIMEOUT_SEC    3600
 #define UI_KEY_REPEAT_INTERVAL 80
@@ -229,7 +229,8 @@ static void draw_progress_locked()
 
 static void draw_text_line(int row, const char* t) {
   if (t[0] != '\0') {
-    gr_text(0, (row+1)*CHAR_HEIGHT-1, t);
+    //gr_text(0, (row+1)*CHAR_HEIGHT-1, t);
+	gr_text(0, (row+1)*CHAR_HEIGHT-(CHAR_HEIGHT-BOARD_RECOVERY_CHAR_HEIGHT)/2-1, t);
   }
 }
 

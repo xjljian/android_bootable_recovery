@@ -393,7 +393,11 @@ int nandroid_backup(const char* backup_path)
 
     if (0 != (ret = nandroid_backup_partition(backup_path, "/system")))
         return ret;
-
+	if (volume_for_path("/preload") != NULL)
+	{
+	    if (0 != (ret = nandroid_backup_partition(backup_path, "/preload")))
+        return ret;
+	}
     if (0 != (ret = nandroid_backup_partition(backup_path, "/data")))
         return ret;
 
@@ -402,12 +406,38 @@ int nandroid_backup(const char* backup_path)
             return ret;
     }
 
+/*
     if (is_data_media() || 0 != stat("/sdcard/.android_secure", &s)) {
         ui_print("No /sdcard/.android_secure found. Skipping backup of applications on external storage.\n");
     }
     else {
         if (0 != (ret = nandroid_backup_partition_extended(backup_path, "/sdcard/.android_secure", 0)))
             return ret;
+    }
+*/
+	int android_secure_has_backup = 0;
+	if (0 == ensure_path_mounted("/external_sd") && 0 == stat("/external_sd/.android_secure", &s))
+    {
+    	if (0 != (ret = nandroid_backup_partition_extended(backup_path, "/external_sd/.android_secure", 0)))
+		{
+			return ret;
+			android_secure_has_backup = 1;
+        }
+        else
+        {
+			ui_print("No /external_sd/.android_secure found. Skipping backup of applications on internal storage.\n");
+        }
+    }
+    else if (0 == ensure_path_mounted("/sdcard") && 0 == stat("/sdcard/.android_secure", &s) && android_secure_has_backup == 0)
+    {
+		if (0 != (ret = nandroid_backup_partition_extended(backup_path, "/sdcard/.android_secure", 0)))
+        {
+        	return ret;
+        }
+        else
+        {
+			ui_print("No /sdcard/.android_secure found. Skipping backup of applications on external storage.\n");
+        }
     }
 
     if (0 != (ret = nandroid_backup_partition_extended(backup_path, "/cache", 0)))
@@ -627,7 +657,7 @@ int nandroid_restore_partition_extended(const char* backup_path, const char* mou
         }
 
         if (backup_filesystem == NULL || restore_handler == NULL) {
-            ui_print("%s.img not found. Skipping restore of %s.\n", name, mount_point);
+            ui_print("%s file not found. Skipping restore of %s.\n", name, mount_point);
             return 0;
         }
         else {
@@ -783,6 +813,12 @@ int nandroid_restore(const char* backup_path, int restore_boot, int restore_syst
     if (restore_system && 0 != (ret = nandroid_restore_partition(backup_path, "/system")))
         return ret;
 
+	if (volume_for_path("/preload") != NULL)
+	{
+	    if (restore_system && 0 != (ret = nandroid_restore_partition(backup_path, "/preload")))
+    	    return ret;	
+	}
+
     if (restore_data && 0 != (ret = nandroid_restore_partition(backup_path, "/data")))
         return ret;
 
@@ -790,10 +826,16 @@ int nandroid_restore(const char* backup_path, int restore_boot, int restore_syst
         if (restore_data && 0 != (ret = nandroid_restore_partition(backup_path, "/datadata")))
             return ret;
     }
-
-    if (restore_data && 0 != (ret = nandroid_restore_partition_extended(backup_path, "/sdcard/.android_secure", 0)))
-        return ret;
-
+    if (0 == ensure_path_mounted("/external_sd"))
+    {
+        if (restore_data && 0 != (ret = nandroid_restore_partition_extended(backup_path, "/external_sd/.android_secure", 0)))
+            return ret;
+    }
+    else
+    {
+        if (restore_data && 0 != (ret = nandroid_restore_partition_extended(backup_path, "/sdcard/.android_secure", 0)))
+            return ret;
+    }
     if (restore_cache && 0 != (ret = nandroid_restore_partition_extended(backup_path, "/cache", 0)))
         return ret;
 
