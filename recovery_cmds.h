@@ -46,7 +46,6 @@ extern int make_f2fs_main(int argc, char **argv);
 extern int fsck_f2fs_main(int argc, char **argv);
 extern int fibmap_main(int argc, char **argv);
 #endif
-
 extern int busybox_driver(int argc, char **argv);
 
 struct recovery_cmd {

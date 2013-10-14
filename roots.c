@@ -157,6 +157,26 @@ int try_mount(const char* device, const char* mount_point, const char* fs_type, 
     return ret;
 }
 
+int use_migrated_storage() {
+#ifdef USE_MIGRATED_STORAGE
+	return 1;
+#endif
+    const MountedVolume* mv =
+        find_mounted_volume_by_mount_point("/data");
+    if (ensure_path_mounted("/data") != 0)
+        return 0;
+	char get_version[255];
+    property_get("persist.sys.android.version", get_version, "");
+    struct stat s;
+	return strncmp(get_version,"4.2",3) >= 0 && 
+			lstat("/data/media/0", &s) == 0;
+	if (!mv) {
+		ignore_data_media_workaround(1);
+		ensure_path_unmounted("/data");
+		ignore_data_media_workaround(0);
+	}
+}
+
 int is_data_media() {
     int i;
     int has_sdcard = 0;
@@ -183,9 +203,15 @@ void setup_data_media() {
             break;
         }
     }
+    // support /data/media/0
+    char path[15];
+    if (use_migrated_storage())
+        sprintf(path, "/data/media/0");
+    else sprintf(path, "/data/media");
+
     rmdir(mount_point);
-    mkdir("/data/media", 0755);
-    symlink("/data/media", mount_point);
+    mkdir(path, 0755);
+    symlink(path, mount_point);
 }
 
 int is_data_media_volume_path(const char* path) {
@@ -207,7 +233,9 @@ int ensure_path_mounted(const char* path) {
 int ensure_path_mounted_at_mount_point(const char* path, const char* mount_point) {
     if (is_data_media_volume_path(path)) {
         if (ui_should_log_stdout()) {
-            LOGI("using /data/media for %s.\n", path);
+            if (use_migrated_storage())
+			    LOGI("using /data/media/0 for %s.\n", path);
+		    else LOGI("using /data/media for %s.\n", path);
         }
         int ret;
         if (0 != (ret = ensure_path_mounted("/data")))
@@ -398,7 +426,14 @@ int format_volume(const char* volume) {
     }
 
     if (strcmp(v->fs_type, "ext4") == 0) {
+#ifdef USE_MKE2FS_FORMAT
+		char ext4_cmd[PATH_MAX];
+		sprintf(ext4_cmd, "/sbin/mke2fs -T ext4 -b 4096 -m 0 -F %s", v->blk_device);
+        int result = __system(ext4_cmd);
+#else
+		reset_ext4fs_info();
         int result = make_ext4fs(v->blk_device, v->length, volume, sehandle);
+#endif
         if (result != 0) {
             LOGE("format_volume: make_extf4fs failed on %s\n", v->blk_device);
             return -1;
