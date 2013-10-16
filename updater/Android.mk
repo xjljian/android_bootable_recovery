@@ -79,9 +79,20 @@ LOCAL_C_INCLUDES += $(dir $(inc))
 
 inc :=
 inc_dep_file :=
-
+updater_inc := $(LOCAL_C_INCLUDES)
+updater_lib := $(LOCAL_STATIC_LIBRARIES)
+updater_cflags := $(LOCAL_CFLAGS)
 LOCAL_MODULE := updater
 
 LOCAL_FORCE_STATIC_EXECUTABLE := true
 
 include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := $(updater_src_files)
+LOCAL_CFLAGS := $(updater_cflags)
+LOCAL_C_INCLUDES := $(updater_inc)
+LOCAL_STATIC_LIBRARIES := $(updater_lib)
+LOCAL_MODULE := libupdater
+
+include $(BUILD_STATIC_LIBRARY)

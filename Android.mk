@@ -147,6 +147,10 @@ ifeq ($(TARGET_USERIMAGES_USE_F2FS), true)
 RECOVERY_LINKS += mkfs.f2fs fsck.f2fs fibmap.f2fs
 endif
 
+ifeq ($(RECOVERY_NEED_SELINUX_FIX),true)
+  RECOVERY_LINKS += restorecon
+endif
+
 # nc is provided by external/netcat
 RECOVERY_SYMLINKS := $(addprefix $(TARGET_RECOVERY_ROOT_OUT)/sbin/,$(RECOVERY_LINKS))
 $(RECOVERY_SYMLINKS): RECOVERY_BINARY := $(LOCAL_MODULE)

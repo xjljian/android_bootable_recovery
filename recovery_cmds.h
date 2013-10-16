@@ -46,6 +46,9 @@ extern int make_f2fs_main(int argc, char **argv);
 extern int fsck_f2fs_main(int argc, char **argv);
 extern int fibmap_main(int argc, char **argv);
 #endif
+#ifdef NEED_SELINUX_FIX
+extern int restorecon_main(int argc, char **argv);
+#endif
 extern int busybox_driver(int argc, char **argv);
 
 struct recovery_cmd {
@@ -79,6 +82,9 @@ static const struct recovery_cmd recovery_cmds[] = {
     { "mkfs.f2fs",      make_f2fs_main },
     { "fsck.f2fs",      fsck_f2fs_main },
     { "fibmap.f2fs",    fibmap_main },
+#endif
+#ifdef NEED_SELINUX_FIX
+    { "restorecon",    restorecon_main },
 #endif
     { NULL, NULL },
 };
