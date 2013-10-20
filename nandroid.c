@@ -45,7 +45,6 @@
 #include <selinux/selinux.h>
 #include <selinux/label.h>
 #include <selinux/android.h>
-static struct selabel_handle *sehandle;
 #endif
 
 void nandroid_generate_timestamp_path(char* backup_path)
@@ -771,14 +770,9 @@ int nandroid_restore_partition_extended(const char* backup_path, const char* mou
         sprintf(tmp, "%s/%s.context", backup_path, name);
         if ((ret = restorecon_from_file(tmp)) < 0) {
             ui_print("restorecon from %s.context error, trying regular restorecon.\n", name);
-            sehandle = selinux_android_file_context_handle();
-            if (!sehandle)
-                LOGE("不能读取file_contexts: %s\n", strerror(errno));
-            else {
-                if ((ret = restorecon_recursive(mount_point, "/data/media/")) < 0) {
-                    LOGE("Restorecon %s error!\n", mount_point);
-                    return ret;
-                }
+            if ((ret = restorecon_recursive(mount_point, "/data/media/")) < 0) {
+                LOGE("Restorecon %s error!\n", mount_point);
+                return ret;
             }
         }
         ui_print("restore selinux context completed.\n");
@@ -1141,8 +1135,8 @@ int restorecon_recursive(const char *pathname, const char *exclude)
         if (strncmp(pathname, exclude, strlen(exclude)) == 0)
             return 0;
     }
-    //if (selinux_android_restorecon(pathname) < 0) {
-    if (restorecon(pathname, &sb) < 0) {
+    if (selinux_android_restorecon(pathname) < 0) {
+    //if (restorecon(pathname, &sb) < 0) {
         LOGW("restorecon: error restoring %s context\n", pathname);
         ret = 1;
     }
@@ -1171,7 +1165,7 @@ int restorecon_recursive(const char *pathname, const char *exclude)
     closedir(dir);
     return ret;
 }
-
+/*
 int restorecon(const char *pathname, const struct stat *sb)
 {
     char *oldcontext, *newcontext;
@@ -1230,7 +1224,7 @@ int restorecon_main(int argc, char **argv)
             exclude = optarg;
             break;
         default:
-            printf("usage:  %s [-nrRv] pathname...\n", progname);
+            printf("usage:  %s [-nrRev] pathname...\n", progname);
             return 1;
         }
     } while (1);
@@ -1238,7 +1232,7 @@ int restorecon_main(int argc, char **argv)
     argc -= optind;
     argv += optind;
     if (!argc) {
-        printf("usage:  %s [-nrRv] pathname...\n", progname);
+        printf("usage:  %s [-nrRev] pathname...\n", progname);
         return 1;
     }
     sehandle = selinux_android_file_context_handle();
@@ -1272,5 +1266,5 @@ int restorecon_main(int argc, char **argv)
     }
 
     return 0;
-}
+}*/
 #endif

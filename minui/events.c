@@ -52,7 +52,8 @@ int vibrate(int timeout_ms) {
     char str[20];
     int fd;
     int ret;
-    
+
+    property_set("ctl.start", "vibrator");
     fd = open(VIBRATOR_TIMEOUT_FILE, O_WRONLY);
     if(fd < 0)
         return -1;
