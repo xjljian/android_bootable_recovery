@@ -327,18 +327,18 @@ int nandroid_backup_partition_extended(const char* backup_path, const char* moun
     ret = backup_handler(mount_point, tmp, callback);
 #ifdef NEED_SELINUX_FIX
     if (0 != ret || strcmp(backup_path, "-") == 0) {
-        LOGI("skipping selinux context!\n");
+        LOGI("Skipping selinux context!\n");
     }
     else if (0 == strcmp(mount_point, "/data") ||
                 0 == strcmp(mount_point, "/system") ||
                 0 == strcmp(mount_point, "/cache"))
     {
-        ui_print("backing up selinux context...\n");
+        ui_print("Backing up selinux context...\n");
         sprintf(tmp, "%s/%s.context", backup_path, name);
         if (bakupcon_to_file(mount_point, tmp) < 0)
-            LOGE("backup selinux context error!\n");
+            LOGE("Backup selinux context error!\n");
         else
-            ui_print("backup selinux context completed.\n");
+            ui_print("Backup selinux context completed.\n");
     }
 #endif
     if (umount_when_finished) {
@@ -451,7 +451,7 @@ int nandroid_backup(const char* backup_path)
             return ret;
     }
 
-    if (is_data_media() || 0 != stat(get_android_secure_path(), &s)) {
+    if (0 != stat(get_android_secure_path(), &s)) {
         ui_print("No .android_secure found. Skipping backup of applications on external storage.\n");
     }
     else {
@@ -645,7 +645,7 @@ int nandroid_restore_partition_extended(const char* backup_path, const char* mou
     char* name = basename(mount_point);
 
     nandroid_restore_handler restore_handler = NULL;
-    const char *filesystems[] = { "yaffs2", "ext2", "ext3", "ext4", "vfat", "rfs", "f2fs", NULL };
+    const char *filesystems[] = { "yaffs2", "ext2", "ext3", "ext4", "vfat", "rfs", "f2fs", "exfat", NULL };
     const char* backup_filesystem = NULL;
     Volume *vol = volume_for_path(mount_point);
     const char *device = NULL;
@@ -765,17 +765,17 @@ int nandroid_restore_partition_extended(const char* backup_path, const char* mou
                 0 == strcmp(mount_point, "/system") ||
                 0 == strcmp(mount_point, "/cache"))
     {
-        ui_print("restoring selinux context...\n");
+        ui_print("Restoring selinux context...\n");
         name = basename(mount_point);
         sprintf(tmp, "%s/%s.context", backup_path, name);
         if ((ret = restorecon_from_file(tmp)) < 0) {
-            ui_print("restorecon from %s.context error, trying regular restorecon.\n", name);
+            ui_print("Restorecon from %s.context error, trying regular restorecon.\n", name);
             if ((ret = restorecon_recursive(mount_point, "/data/media/")) < 0) {
                 LOGE("Restorecon %s error!\n", mount_point);
                 return ret;
             }
         }
-        ui_print("restore selinux context completed.\n");
+        ui_print("Restore selinux context completed.\n");
     }
 #endif
 
@@ -891,7 +891,8 @@ int nandroid_restore(const char* backup_path, int restore_boot, int restore_syst
             return ret;
     }
 
-    if (restore_data && 0 != (ret = nandroid_restore_partition_extended(backup_path, get_android_secure_path(), 0)))
+    if (restore_data && get_android_secure_path() &&
+        0 != (ret = nandroid_restore_partition_extended(backup_path, get_android_secure_path(), 0)))
         return ret;
 
     if (restore_cache && 0 != (ret = nandroid_restore_partition_extended(backup_path, "/cache", 0)))

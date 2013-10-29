@@ -461,6 +461,7 @@ static void reset_gestures() {
     old_y = 0;
     touch_x = 0;
     touch_y = 0;
+    ui_clear_key_queue();
 }
 
 static int input_callback(int fd, short revents, void *data)

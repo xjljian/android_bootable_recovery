@@ -752,7 +752,7 @@ int format_unknown_device(const char *device, const char* path, const char *fs_t
         __system(tmp);
     }
 
-    ensure_path_unmounted(path);
+    if (strstr(path, ".android_secure") == NULL) ensure_path_unmounted(path);
     return 0;
 }
 

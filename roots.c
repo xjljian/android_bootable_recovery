@@ -132,8 +132,28 @@ char** get_extra_storage_paths() {
 static char* android_secure_path = NULL;
 char* get_android_secure_path() {
     if (android_secure_path == NULL) {
-        android_secure_path = malloc(sizeof("/.android_secure") + strlen(get_primary_storage_path()) + 1);
-        sprintf(android_secure_path, "%s/.android_secure", primary_storage_path);
+        char tmp[PATH_MAX];
+        char** extra_paths = get_extra_storage_paths();
+        int num_extra_volumes = get_num_extra_volumes();
+        int i;
+        struct stat st;
+        for (i = 0; i < num_extra_volumes; i++) {
+            sprintf(tmp, "%s/.android_secure", extra_paths[i]);
+            if (ensure_path_mounted(extra_paths[i]) == 0) {
+                if (0 == lstat(tmp, &st)) {
+                    android_secure_path = malloc(strlen(tmp)+1);
+                    sprintf(android_secure_path, "%s/.android_secure", extra_paths[i]);
+                    break;
+                }
+                else {
+                    ensure_path_unmounted(extra_paths[i]);
+                }
+            }
+        }
+        if (android_secure_path == NULL) {
+            android_secure_path = malloc(sizeof("/.android_secure") + strlen(get_primary_storage_path()) + 1);
+            sprintf(android_secure_path, "%s/.android_secure", primary_storage_path);
+        }
     }
     return android_secure_path;
 }
