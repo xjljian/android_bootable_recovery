@@ -107,13 +107,13 @@ void write_recovery_version() {
 
 static void write_last_install_path(const char* install_path) {
     char path[PATH_MAX];
-    sprintf(path, "%s%sclockworkmod/.last_install_path", get_primary_storage_path(), (is_data_media() ? "/0/" : "/"));
+    sprintf(path, "%s/clockworkmod/.last_install_path", get_primary_storage_path());
     write_string_to_file(path, install_path);
 }
 
 const char* read_last_install_path() {
     char path[PATH_MAX];
-    sprintf(path, "%s%sclockworkmod/.last_install_path", get_primary_storage_path(), (is_data_media() ? "/0/" : "/"));
+    sprintf(path, "%s/clockworkmod/.last_install_path", get_primary_storage_path());
 
     ensure_path_mounted(path);
     FILE *f = fopen(path, "r");
