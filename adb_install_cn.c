@@ -105,8 +105,8 @@ apply_from_adb() {
     stop_adbd();
     set_usb_driver(1);
 
-    ui_print("\n\nSideload已经开始 ...\n现在可以发送刷机包\n"
-              "到设备上,命令:\"adb sideload <filename>\"...\n\n");
+    ui_print("\n\nSideload已经开始,现在可以发送刷机包到设备上.\n"
+              "命令:\nadb sideload <filename>\n\n");
 
     struct sideload_waiter_data data;
     if ((data.child = fork()) == 0) {
@@ -122,7 +122,7 @@ apply_from_adb() {
                                 NULL
     };
 
-    static char* list[] = { "Cancel sideload", NULL };
+    static char* list[] = { "取消sideload", NULL };
     
     get_menu_selection(headers, list, 0, 0);
 
