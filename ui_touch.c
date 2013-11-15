@@ -453,12 +453,25 @@ static unsigned int old_x = 0;
 static unsigned int old_y = 0;
 static int diff_x = 0;
 static int diff_y = 0;
+static int min_x_swipe_px = 100;
+static int min_y_swipe_px = 80;
+
+static void set_min_swipe_lengths() {
+    char value[PROPERTY_VALUE_MAX];
+    property_get("ro.sf.lcd_density", value, "0");
+    int screen_density = atoi(value);
+    if(screen_density > 0) {
+        min_x_swipe_px = (int)(0.5 * screen_density); // Roughly 0.5in
+        min_y_swipe_px = (int)(0.25 * screen_density); // Roughly 0.25in
+        fprintf(stdout, "min_x_swipe_px=%d,min_y_swipe_px=%d\n", min_x_swipe_px, min_y_swipe_px);
+    }
+}
 
 static void reset_gestures() {
     diff_x = 0;
     diff_y = 0;
-    old_x  = 0;
-    old_y = 0;
+    old_x  = -1;
+    old_y = -1;
     touch_x = 0;
     touch_y = 0;
     ui_clear_key_queue();
@@ -521,6 +534,7 @@ static int input_callback(int fd, short revents, void *data)
 
         //start touch code
         //LOGE("ev.type: %x, ev.code: %x, ev.value: %i\n", ev.type, ev.code, ev.value);
+        //fprintf(stdout, "min_x_swipe_px=%d,min_y_swipe_px=%d\n", min_x_swipe_px, min_y_swipe_px);
         switch(ev.code){
             case ABS_MT_TRACKING_ID:
                 s_tracking_id = ev.value;
@@ -553,14 +567,13 @@ static int input_callback(int fd, short revents, void *data)
                 old_x = touch_x;
                 float touch_x_rel = (float)ev.value / (float)max_x_touch;
                 touch_x = touch_x_rel * gr_fb_width();
-                if(old_x == 0) break; 
+                if (old_x == -1) break;
                 diff_x += touch_x - old_x;
-                if(touch_y < (gr_fb_height() - gr_get_height(surface))) {
-                    int diff_w=gr_fb_width()/4;
-                    if(diff_x > diff_w) {
+                if (touch_y < (gr_fb_height() - gr_get_height(surface))) {
+                    if(diff_x > min_x_swipe_px) {
                         slide_right = 1;
                         reset_gestures();
-                    } else if(diff_x < (diff_w*-1)) {
+                    } else if (diff_x < -min_x_swipe_px) {
                         slide_left = 1;
                         reset_gestures();
                     }
@@ -571,18 +584,17 @@ static int input_callback(int fd, short revents, void *data)
                 old_y = touch_y;
                 float touch_y_rel = (float)ev.value / (float)max_y_touch;
                 touch_y = touch_y_rel * gr_fb_height();
-                if(old_y == 0) break;
+                if (old_y == -1) break;
                 diff_y += touch_y - old_y;
-                if(touch_y < (gr_fb_height() - gr_get_height(surface))) {
-                    int diff_h=(gr_fb_height() - gr_get_height(surface))/20;
-                    if (diff_y > diff_h) {
+                if (touch_y < (gr_fb_height() - gr_get_height(surface))) {
+                    if (diff_y > min_y_swipe_px) {
                         //fake_key = 1;
                         ev.type = EV_KEY;
                         ev.code = KEY_VOLUMEDOWN;
                         ev.value = 1;
                         rel_sum = 0;                
                         reset_gestures();
-                    } else if (diff_y < (diff_h*-1)) {
+                    } else if (diff_y < -min_y_swipe_px) {
                         //fake_key = 1;
                         ev.type = EV_KEY;
                         ev.code = KEY_VOLUMEUP;
@@ -658,6 +670,7 @@ void ui_init(void)
 {
     ui_has_initialized = 1;
     gr_init();
+    set_min_swipe_lengths();
     ev_init(input_callback, NULL);
 
     gr_surface surface = gVirtualKeys;

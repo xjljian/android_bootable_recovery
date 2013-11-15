@@ -1166,6 +1166,7 @@ int restorecon_recursive(const char *pathname, const char *exclude)
     return ret;
 }
 /*
+extern struct selabel_handle *sehandle;
 int restorecon(const char *pathname, const struct stat *sb)
 {
     char *oldcontext, *newcontext;
@@ -1235,12 +1236,12 @@ int restorecon_main(int argc, char **argv)
         printf("usage:  %s [-nrRev] pathname...\n", progname);
         return 1;
     }
-    sehandle = selinux_android_file_context_handle();
-    if (!sehandle) {
-        printf("Could not load file_contexts:  %s\n",
-                strerror(errno));
-        return -1;
-    }
+    //sehandle = selinux_android_file_context_handle();
+    //if (!sehandle) {
+    //    printf("Could not load file_contexts:  %s\n",
+    //            strerror(errno));
+    //    return -1;
+    //}
     int rc;
     struct stat sb;
     if (recurse) {

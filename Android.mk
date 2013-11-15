@@ -70,7 +70,7 @@ ifeq ($(ENABLE_LOKI_RECOVERY),true)
   LOCAL_SRC_FILES += \
     compact_loki.c
 endif
-BOARD_USE_MKE2FS_FORMAT := true
+#BOARD_USE_MKE2FS_FORMAT := true
 ifeq ($(BOARD_USE_MKE2FS_FORMAT),true)
   LOCAL_CFLAGS += -DUSE_MKE2FS_FORMAT
 endif

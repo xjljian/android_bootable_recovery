@@ -690,13 +690,29 @@ int format_device(const char *device, const char *path, const char *fs_type) {
 		sprintf(ext4_cmd, "/sbin/mke2fs -T ext4 -b 4096 -m 0 -F %s", device);
         int result = __system(ext4_cmd);
 #else
-        reset_ext4fs_info();
         int result = make_ext4fs(device, length, v->mount_point, sehandle);
 #endif
         if (result != 0) {
-            LOGE("format_volume: make_ext4fs failed on %s\n", device);
+            LOGE("format_volume: format ext4 fs failed on %s\n", device);
             return -1;
         }
+#ifdef USE_MKE2FS_FORMAT
+#ifdef NEED_SELINUX_FIX
+        if (0 == strcmp(v->mount_point, "/data") ||
+            0 == strcmp(v->mount_point, "/system") ||
+            0 == strcmp(v->mount_point, "/cache"))
+        {
+            ensure_path_mounted(v->mount_point);
+            char tmp[PATH_MAX];
+            sprintf(tmp, "%s/lost+found", v->mount_point);
+            if (selinux_android_restorecon(tmp) < 0) {
+                LOGW("restorecon: error restoring %s context\n",tmp);
+                //return -1;
+            }
+            ensure_path_unmounted(v->mount_point);
+        }
+#endif
+#endif
         return 0;
     }
 
@@ -1202,13 +1218,16 @@ int show_nandroid_menu()
             case 0:
                 {
                     char backup_path[PATH_MAX];
+                    char rom_name[PROPERTY_VALUE_MAX] = "noname";
+                    get_rom_name(rom_name);
+
                     time_t t = time(NULL);
                     struct tm *tmp = localtime(&t);
                     if (tmp == NULL)
                     {
                         struct timeval tp;
                         gettimeofday(&tp, NULL);
-                        sprintf(backup_path, "%s/clockworkmod/backup/%ld", chosen_path, tp.tv_sec);
+                        sprintf(backup_path, "%s/clockworkmod/backup/%ld_%s", chosen_path, tp.tv_sec, rom_name);
                     }
                     else
                     {
@@ -1216,7 +1235,7 @@ int show_nandroid_menu()
                         strftime(path_fmt, sizeof(path_fmt), "clockworkmod/backup/%F.%H.%M.%S", tmp);
                         // this sprintf results in:
                         // /emmc/clockworkmod/backup/%F.%H.%M.%S (time values are populated too)
-                        sprintf(backup_path, "%s/%s", chosen_path, path_fmt);
+                        sprintf(backup_path, "%s/%s_%s", chosen_path, path_fmt, rom_name);
                     }
 					ui_print("to:%s\n", backup_path);
                     if (confirm_selection( "确认备份?", "是的-备份"))
@@ -1275,7 +1294,7 @@ void format_sdcard(const char* volume) {
     int ret = -1;
     char cmd[PATH_MAX];
     int chosen_item = get_menu_selection(headers, list, 0, 0);
-    if (chosen_item == GO_BACK)
+    if (chosen_item < 0) // REFRESH or GO_BACK
         return;
     if (!confirm_selection( "确认格式化?", "是的 - 格式化"))
         return;
