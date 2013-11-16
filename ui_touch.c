@@ -438,11 +438,7 @@ static void *progress_thread(void *cookie)
     return NULL;
 }
 
-//kanged this vibrate stuff from teamwin (thanks guys!)
-//#define VIBRATOR_TIME_MS        10
-
 static int rel_sum = 0;
-static int in_touch = 0; //1 = in a touch
 static int slide_right = 0;
 static int slide_left = 0;
 static int s_tracking_id = -1;
@@ -455,6 +451,7 @@ static int diff_x = 0;
 static int diff_y = 0;
 static int min_x_swipe_px = 100;
 static int min_y_swipe_px = 80;
+static int input_button_has_draw = 0;
 
 static void set_min_swipe_lengths() {
     char value[PROPERTY_VALUE_MAX];
@@ -470,8 +467,8 @@ static void set_min_swipe_lengths() {
 static void reset_gestures() {
     diff_x = 0;
     diff_y = 0;
-    old_x  = -1;
-    old_y = -1;
+    old_x  = 0;
+    old_y  = 0;
     touch_x = 0;
     touch_y = 0;
     ui_clear_key_queue();
@@ -530,44 +527,43 @@ static int input_callback(int fd, short revents, void *data)
         ioctl(fd, EVIOCGABS(ABS_MT_POSITION_Y), abs_store);
         int max_y_touch = abs_store[2];
 
-        //printf("x and y bounds: %i x %i\n", max_x_touch, max_y_touch);
-
-        //start touch code
-        //LOGE("ev.type: %x, ev.code: %x, ev.value: %i\n", ev.type, ev.code, ev.value);
-        //fprintf(stdout, "min_x_swipe_px=%d,min_y_swipe_px=%d\n", min_x_swipe_px, min_y_swipe_px);
         switch(ev.code){
             case ABS_MT_TRACKING_ID:
                 s_tracking_id = ev.value;
                 if (s_tracking_id != -1) break;
-                //finger lifted! lets run with this
-                ev.type = EV_KEY;
-                if (touch_y >= (gr_fb_height() - gr_get_height(surface)) && touch_x > 0) {
-                    //fake_key = 1;
-                    ev.code=input_buttons();
-                    rel_sum = 0;
-                    vibrate(VIBRATOR_TIME_MS);
-                } else {
+                if (touch_y < (gr_fb_height() - gr_get_height(surface))) {
                     if(slide_right == 1) {
-                        //fake_key = 1;
+                        ev.type = EV_KEY;
                         ev.code = KEY_POWER;
-                        rel_sum = 0;
+                        ev.value = 1;
                         slide_right = 0;
                     } else if(slide_left == 1) {
-                        //fake_key = 1;
+                        ev.type = EV_KEY;
                         ev.code = KEY_BACK;
-                        rel_sum = 0;
+                        ev.value = 1;
                         slide_left = 0;
                     }
+                } else if (touch_x > 0) {
+                    ev.type = EV_KEY;
+                    ev.code=input_buttons();
+                    ev.value = 1;
+                    vibrate(VIBRATOR_TIME_MS);
                 }
-                ev.value = 1;
+                //clear input_button
+                if (input_button_has_draw == 1) {
+                    pthread_mutex_lock(&gUpdateMutex);
+                    draw_virtualkeys_locked();
+                    pthread_mutex_unlock(&gUpdateMutex);
+                    input_button_has_draw = 0;
+                }
                 reset_gestures();
                 break;
             case ABS_MT_POSITION_X:
-                //if (s_tracking_id == -1) break;
+                if (s_tracking_id == -1) break;
                 old_x = touch_x;
                 float touch_x_rel = (float)ev.value / (float)max_x_touch;
                 touch_x = touch_x_rel * gr_fb_width();
-                if (old_x == -1) break;
+                if (old_x == 0) break;
                 diff_x += touch_x - old_x;
                 if (touch_y < (gr_fb_height() - gr_get_height(surface))) {
                     if(diff_x > min_x_swipe_px) {
@@ -577,32 +573,29 @@ static int input_callback(int fd, short revents, void *data)
                         slide_left = 1;
                         reset_gestures();
                     }
-                } else input_buttons();
+                }
                 break;
             case ABS_MT_POSITION_Y:
-                //if (s_tracking_id == -1) break;
+                if (s_tracking_id == -1) break;
                 old_y = touch_y;
                 float touch_y_rel = (float)ev.value / (float)max_y_touch;
                 touch_y = touch_y_rel * gr_fb_height();
-                if (old_y == -1) break;
+                input_buttons();
+                if (old_y == 0) break;
                 diff_y += touch_y - old_y;
                 if (touch_y < (gr_fb_height() - gr_get_height(surface))) {
                     if (diff_y > min_y_swipe_px) {
-                        //fake_key = 1;
                         ev.type = EV_KEY;
                         ev.code = KEY_VOLUMEDOWN;
                         ev.value = 1;
-                        rel_sum = 0;                
                         reset_gestures();
                     } else if (diff_y < -min_y_swipe_px) {
-                        //fake_key = 1;
                         ev.type = EV_KEY;
                         ev.code = KEY_VOLUMEUP;
                         ev.value = 1;
-                        rel_sum = 0;
                         reset_gestures();
                     }
-                } else input_buttons();
+                }
                 break;
             default:
                 break;
@@ -723,9 +716,9 @@ void ui_init(void)
         // base image on the screen.
         if (gBackgroundIcon[BACKGROUND_ICON_INSTALLING] != NULL) {
             gr_surface bg = gBackgroundIcon[BACKGROUND_ICON_INSTALLING];
-            ui_parameters.install_overlay_offset_x +=
+            ui_parameters.install_overlay_offset_x =
                 (gr_fb_width() - gr_get_width(bg)) / 2;
-            ui_parameters.install_overlay_offset_y +=
+            ui_parameters.install_overlay_offset_y =
                 (gr_fb_height() - gr_get_height(bg)) / 2;
         }
     } else {
@@ -1361,6 +1354,7 @@ int input_buttons()
         gr_fill(start_draw, gr_fb_height()-gr_get_height(surface), end_draw, gr_fb_height());
         gr_flip();
         pthread_mutex_unlock(&gUpdateMutex);
+        input_button_has_draw = 1;
     }
     return final_code;
 }
