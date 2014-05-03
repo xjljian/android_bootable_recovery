@@ -362,6 +362,7 @@ int nandroid_backup_partition_extended(const char* backup_path, const char* moun
     }
     ret = backup_handler(mount_point, tmp, callback);
 #ifdef NEED_SELINUX_FIX
+#ifdef BOARD_RECOVERY_USE_BBTAR
     if (0 != ret || strcmp(backup_path, "-") == 0 ||
          backup_handler == dedupe_compress_wrapper)
         LOGI("Skipping backup selinux context!\n");
@@ -376,6 +377,7 @@ int nandroid_backup_partition_extended(const char* backup_path, const char* moun
         else
             ui_print("Backup selinux context completed.\n");
     }
+#endif
 #endif
     if (umount_when_finished) {
         ensure_path_unmounted(mount_point);
@@ -822,13 +824,10 @@ int nandroid_restore_partition_extended(const char* backup_path, const char* mou
     {
         name = basename(mount_point);
         sprintf(tmp, "%s/%s.context", backup_path, name);
-        ui_print("Restoring selinux context...\n");
-        if ((ret = restorecon_from_file(tmp)) < 0) {
-            ui_print("Restorecon from %s.context error, trying regular restorecon.\n", name);
-            if ((ret = restorecon_recursive(mount_point, "/data/media/")) < 0) {
-                LOGE("Restorecon %s error!\n", mount_point);
-                return ret;
-            }
+        struct stat sb;
+        if (lstat(tmp, &sb) == 0) {
+            ui_print("Restoring selinux context...\n");
+            ret = restorecon_from_file(tmp);
             ui_print("Restore selinux context completed.\n");
         }
     }
@@ -1177,11 +1176,13 @@ int restorecon_from_file(const char *filename)
         char *buf = linebuf;
 
         p1 = strtok(buf, "\t");
+        if(!p1) continue;
         p2 = strtok(NULL, "\t");
+        if(!p2) continue;
         LOGI("%s %s\n", p1, p2);
         if (lsetfilecon(p1, p2) < 0) {
-            LOGW("restorecon_from_file: can't setfilecon %s\n", p1);
-            ret = 1;
+            LOGE("restorecon_from_file: can't setfilecon %s\n", p1);
+            ret++;
         }
     }
     fclose(f);

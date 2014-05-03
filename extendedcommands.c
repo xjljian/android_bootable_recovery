@@ -1233,7 +1233,15 @@ int show_nandroid_menu() {
                         // clockworkmod/backup/%F.%H.%M.%S (time values are populated too)
                         sprintf(backup_path, "%s/%s_%s", chosen_path, path_fmt, rom_name);
                     }
-					ui_print("to:%s\n", backup_path);
+                    int fmt = nandroid_get_default_backup_format();
+                    char *fmt_str;
+                    if (fmt == NANDROID_BACKUP_FORMAT_DUP) {
+                        fmt_str = "dup";
+                    } else if (fmt == NANDROID_BACKUP_FORMAT_TGZ) {
+                        fmt_str = "tar.gz";
+                    } else
+                        fmt_str = "tar";
+                    ui_print("backup format: %s\nbackup directory:\n%s\n", fmt_str, backup_path);
                     if (confirm_selection( "Confirm backup?", "Yes - Backup"))
                     {
 						nandroid_backup(backup_path);
@@ -1324,7 +1332,7 @@ void format_sdcard(const char* volume) {
         case 5:
         case 6: {
             // workaround for new vold managed volumes that cannot be recognized by prebuilt ext2/ext3 bins
-            const char *device = v->blk_device2;
+            char *device = v->blk_device2;
             if (device == NULL)
                 device = v->blk_device;
             ret = format_unknown_device(device, v->mount_point, list[chosen_item]);
