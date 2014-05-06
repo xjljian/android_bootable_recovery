@@ -1188,7 +1188,7 @@ int restorecon_from_file(const char *filename)
     fclose(f);
     return ret;
 }
-
+/*
 int restorecon_recursive(const char *pathname, const char *exclude)
 {
     int ret = 0;
@@ -1265,7 +1265,7 @@ int restorecon(const char *pathname, const struct stat *sb)
     freecon(newcontext);
     return 0;
 }
-/*
+
 int restorecon_main(int argc, char **argv)
 {
     int ch, recurse = 0;
