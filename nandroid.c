@@ -618,7 +618,7 @@ static int tar_gzip_extract_wrapper(const char* backup_file_image, const char* b
 #ifdef BOARD_RECOVERY_USE_BBTAR
     sprintf(tmp, "cd $(dirname %s) ; set -o pipefail ; cat %s* | pigz -d -c | tar xv ; exit $?", backup_path, backup_file_image);
 #else
-    sprintf(tmp, "cd $(dirname %s) ; set -o pipefail ; cat %s* | pigz -d -c | tar -xsv ; exit $?", backup_path, backup_file_image);
+    sprintf(tmp, "cd $(dirname %s) ; set -o pipefail ; cat %s* | pigz -d -c | tar -xsv --numeric-owner ; exit $?", backup_path, backup_file_image);
 #endif
 
     return do_tar_extract(tmp, callback);
@@ -629,7 +629,7 @@ static int tar_extract_wrapper(const char* backup_file_image, const char* backup
 #ifdef BOARD_RECOVERY_USE_BBTAR
     sprintf(tmp, "cd $(dirname %s) ; set -o pipefail ; cat %s* | tar xv ; exit $?", backup_path, backup_file_image);
 #else
-    sprintf(tmp, "cd $(dirname %s) ; set -o pipefail ; cat %s* | tar -xsv ; exit $?", backup_path, backup_file_image);
+    sprintf(tmp, "cd $(dirname %s) ; set -o pipefail ; cat %s* | tar -xsv --numeric-owner ; exit $?", backup_path, backup_file_image);
 #endif
 
     return do_tar_extract(tmp, callback);
@@ -666,7 +666,7 @@ static int tar_undump_wrapper(const char* backup_file_image, const char* backup_
 #ifdef BOARD_RECOVERY_USE_BBTAR
     sprintf(tmp, "cd $(dirname %s) ; tar xv ", backup_path);
 #else
-    sprintf(tmp, "cd $(dirname %s) ; tar -xsv ", backup_path);
+    sprintf(tmp, "cd $(dirname %s) ; tar -xsv --numeric-owner ", backup_path);
 #endif
 
     return __system(tmp);
