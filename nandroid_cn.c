@@ -42,11 +42,11 @@
 #include "flashutils/flashutils.h"
 #include <libgen.h>
 
-#ifdef NEED_SELINUX_FIX
+/*#ifdef NEED_SELINUX_FIX
 #include <selinux/selinux.h>
 #include <selinux/label.h>
 #include <selinux/android.h>
-#endif
+#endif*/
 
 void nandroid_generate_timestamp_path(char* backup_path) {
     time_t t = time(NULL);
@@ -361,7 +361,7 @@ int nandroid_backup_partition_extended(const char* backup_path, const char* moun
         return -2;
     }
     ret = backup_handler(mount_point, tmp, callback);
-#ifdef NEED_SELINUX_FIX
+/*#ifdef NEED_SELINUX_FIX
 #ifdef BOARD_RECOVERY_USE_BBTAR
     if (0 != ret || strcmp(backup_path, "-") == 0 ||
          backup_handler == dedupe_compress_wrapper)
@@ -378,7 +378,7 @@ int nandroid_backup_partition_extended(const char* backup_path, const char* moun
             ui_print("备份selinux context完毕.\n");
     }
 #endif
-#endif
+#endif*/
     if (umount_when_finished) {
         ensure_path_unmounted(mount_point);
     }
