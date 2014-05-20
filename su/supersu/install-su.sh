@@ -11,6 +11,11 @@ ch_con() {
 	chcon u:object_r:system_file:s0 $1
 }
 
+ch_con_ext() {
+	/system/bin/toolbox chcon $2 $1
+	chcon $2 $1
+}
+
 mount /system
 mount /data
 mount -o rw,remount /system
@@ -30,6 +35,7 @@ chattr -i /system/etc/install-recovery.sh
 rm -f /system/bin/su
 rm -f /system/xbin/su
 rm -f /system/xbin/daemonsu
+rm -f /system/xbin/sugote
 rm -f /system/bin/.ext/.su
 rm -f /system/etc/install-recovery.sh
 rm -f /system/etc/init.d/99SuperSUDaemon
@@ -65,6 +71,7 @@ rm -f /data/app/eu.chainfire.supersu-*
 mkdir /system/bin/.ext
 cp $BIN/su /system/xbin/daemonsu
 cp $BIN/su /system/xbin/su
+cp $BIN/su /system/xbin/sugote
 cp $BIN/su /system/bin/.ext/.su
 cp $COM/install-recovery.sh /system/etc/install-recovery.sh
 cp $COM/99SuperSUDaemon /system/etc/init.d/99SuperSUDaemon
@@ -73,6 +80,7 @@ echo 1 > /system/etc/.installed_su_daemon
 set_perm 0 0 0777 /system/bin/.ext
 set_perm 0 0 06755 /system/bin/.ext/.su
 set_perm 0 0 06755 /system/xbin/su
+set_perm 0 0 0755 /system/xbin/sugote
 set_perm 0 0 0755 /system/xbin/daemonsu
 set_perm 0 0 0755 /system/etc/install-recovery.sh
 set_perm 0 0 0755 /system/etc/init.d/99SuperSUDaemon
@@ -80,6 +88,7 @@ set_perm 0 0 0644 /system/etc/.installed_su_daemon
 
 ch_con /system/bin/.ext/.su
 ch_con /system/xbin/su
+ch_con_ext /system/xbin/su u:object_r:zygote_exec:s0
 ch_con /system/xbin/daemonsu
 ch_con /system/etc/install-recovery.sh
 ch_con /system/etc/init.d/99SuperSUDaemon
