@@ -88,7 +88,7 @@ set_perm 0 0 0644 /system/etc/.installed_su_daemon
 
 ch_con /system/bin/.ext/.su
 ch_con /system/xbin/su
-ch_con_ext /system/xbin/su u:object_r:zygote_exec:s0
+ch_con_ext /system/xbin/sugote u:object_r:zygote_exec:s0
 ch_con /system/xbin/daemonsu
 ch_con /system/etc/install-recovery.sh
 ch_con /system/etc/init.d/99SuperSUDaemon
