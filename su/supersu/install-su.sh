@@ -23,7 +23,21 @@ mount -o rw,remount /system /system
 mount -o rw,remount /
 mount -o rw,remount / /
 
+ABI=$(cat /default.prop | grep ro.product.cpu.abi= | dd bs=1 skip=19 count=3)
+ABI2=$(cat /default.prop | grep ro.product.cpu.abi2= | dd bs=1 skip=20 count=3)
+
 ARCH=arm
+if [ "$ABI" = "x86" ]; then ARCH=x86; fi;
+if [ "$ABI2" = "x86" ]; then ARCH=x86; fi;
+
+API=$(cat /system/build.prop | grep ro.build.version.sdk= | dd bs=1 skip=21 count=2)
+SUMOD=06755
+if [ "$API" -eq "$API" ]; then
+  if [ "$API" -gt "17" ]; then
+      SUMOD=0755
+  fi
+fi
+
 BIN=/sbin/supersu/$ARCH
 COM=/sbin/supersu/common
 
@@ -78,8 +92,8 @@ cp $COM/99SuperSUDaemon /system/etc/init.d/99SuperSUDaemon
 echo 1 > /system/etc/.installed_su_daemon
 
 set_perm 0 0 0777 /system/bin/.ext
-set_perm 0 0 06755 /system/bin/.ext/.su
-set_perm 0 0 06755 /system/xbin/su
+set_perm 0 0 $SUMOD /system/bin/.ext/.su
+set_perm 0 0 $SUMOD /system/xbin/su
 set_perm 0 0 0755 /system/xbin/sugote
 set_perm 0 0 0755 /system/xbin/daemonsu
 set_perm 0 0 0755 /system/etc/install-recovery.sh
